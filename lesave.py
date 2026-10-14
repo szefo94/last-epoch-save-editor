@@ -450,6 +450,24 @@ def add_items(db, save, items, container=INVENTORY_ID):
     return left_over
 
 
+def place_item(db, save, item, x, y, container=INVENTORY_ID):
+    """Puts one item at a grid position; raises ValueError when it would overlap or leave the grid."""
+    grid_w, grid_h = INVENTORY_SIZE if save.is_character else STASH_TAB_SIZE
+    w, h = db.size(item['base'], item['sub'])
+    if x < 0 or y < 0 or x + w > grid_w or y + h > grid_h:
+        raise ValueError('a %dx%d item does not fit at %d,%d' % (w, h, x, y))
+    cells = occupied_cells(db, save, container)
+    if any((x + i, y + j) in cells for i in range(w) for j in range(h)):
+        raise ValueError('cell %d,%d is occupied' % (x, y))
+    entry = {'itemData': None, 'data': encode(dict(item, version=save.item_version())),
+             'inventoryPosition': {'x': x, 'y': y}, 'quantity': 1}
+    if save.is_character:
+        entry['containerID'] = container
+    entry['formatVersion'] = 2
+    save.items.append(entry)
+    return entry
+
+
 def clear_container(save, container=INVENTORY_ID):
     if save.is_character:
         save.json['savedItems'] = [e for e in save.items if e.get('containerID') != container]

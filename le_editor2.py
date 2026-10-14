@@ -63,10 +63,11 @@ class IconCache:
 class GridView(tk.Canvas):
     """One box per item on an inventory grid, with the item art; clicking a box calls on_pick(index)."""
 
-    def __init__(self, parent, db, icons, on_pick):
+    def __init__(self, parent, db, icons, on_pick, on_menu=None):
         super().__init__(parent, background=theme.BG, highlightthickness=0)
-        self.db, self.icons, self.on_pick = db, icons, on_pick
+        self.db, self.icons, self.on_pick, self.on_menu = db, icons, on_pick, on_menu
         self.bind('<Button-1>', self.click)
+        self.bind('<Button-3>', self.right_click)
 
     def draw(self, save, container=None, selected=(), size=None):
         self.delete('all')
@@ -98,6 +99,15 @@ class GridView(tk.Canvas):
         hit = [t for t in self.gettags('current') if t.startswith('idx')]
         if hit:
             self.on_pick(int(hit[0][3:]))
+
+    def right_click(self, event):
+        if self.on_menu is None:
+            return
+        hit = [t for t in self.gettags('current') if t.startswith('idx')]
+        index = int(hit[0][3:]) if hit else None
+        if index is not None:
+            self.on_pick(index)
+        self.on_menu(event, (event.x - 2) // CELL, (event.y - 2) // CELL, index)
 
 
 # Paper doll: slot container id -> (x, y, w, h) in cells.
@@ -431,8 +441,11 @@ class AddPage(ttk.Frame):
         self.target_box = ttk.Combobox(row, state='readonly', width=24, values=['Character inventory', 'Selected stash tab'])
         self.target_box.current(0)
         self.target_box.pack(side='left', padx=4)
+        self.target_box.bind('<<ComboboxSelected>>', lambda e: setattr(self, 'cell_target', None))
+        self.cell_target = None     # (save, x, y) set by the grid's right-click menu
         tabs = ttk.Notebook(self)
         tabs.pack(fill='both', expand=True, pady=6)
+        self.tabs = tabs
         tabs.add(self._unique_tab(tabs), text='Unique')
         tabs.add(self._custom_tab(tabs), text='Custom')
         tabs.add(self._guide_tab(tabs), text='Guide')
@@ -442,6 +455,11 @@ class AddPage(ttk.Frame):
     def put(self, items):
         if not items:
             return self.app.say('Nothing to add.')
+        if self.cell_target:
+            save, x, y = self.cell_target
+            self.cell_target = None
+            self.target_box.current(0 if save.is_character else 1)
+            return self.app.put_here(save, x, y, items[0]) if len(items) == 1 else self.app.put(save, items)
         if self.target_box.current() == 0:
             if not self.app.char:
                 return self.app.say('No character loaded.')
@@ -1158,7 +1176,8 @@ class App(tk.Tk):
         self.stash_tree.pack(side='left', fill='both', expand=True)
         scroll.pack(side='left', fill='y')
         self.stash_tree.bind('<<TreeviewSelect>>', lambda e: self.stash_pick())
-        self.stash_grid = GridView(f, self.db, self.icons, lambda i: self.pick_from_grid('stash', i))
+        self.stash_grid = GridView(f, self.db, self.icons, lambda i: self.pick_from_grid('stash', i),
+                                   lambda e, x, y, i: self.grid_menu(e, 'stash', x, y, i))
         self.stash_grid.pack(anchor='w')
         return f
 
@@ -1193,7 +1212,8 @@ class App(tk.Tk):
         row.pack(fill='x')
         ttk.Label(row, text='Inventory').pack(side='left')
         ttk.Button(row, text='Clear', command=self.clear_inventory).pack(side='right')
-        self.char_grid = GridView(col, self.db, self.icons, lambda i: self.pick_from_grid('char', i))
+        self.char_grid = GridView(col, self.db, self.icons, lambda i: self.pick_from_grid('char', i),
+                                  lambda e, x, y, i: self.grid_menu(e, 'char', x, y, i))
         self.char_grid.pack(anchor='w')
         return f
 
@@ -1360,6 +1380,49 @@ class App(tk.Tk):
                 iid = 'it:%s:%d' % (tab.name, index)
                 self.stash_tree.selection_set(iid)
                 self.stash_tree.see(iid)
+
+    # ------------------------------------------------------------ grid context menu
+    def grid_menu(self, event, which, x, y, index):
+        """Right-click on an inventory or stash tab cell: add items there, paste, edit or delete."""
+        save = self.char if which == 'char' else self.current_tab()
+        if save is None:
+            return self.say('Select a stash tab first.')
+        menu = tk.Menu(self, tearoff=0, background=theme.PANEL, foreground=theme.TEXT,
+                       activebackground=theme.SELECT, activeforeground=theme.GOLD_LIGHT)
+        where = 'inventory' if which == 'char' else save.json.get('displayName', save.name)
+        menu.add_command(label='Cell %d,%d of %s' % (x, y, where), state='disabled')
+        menu.add_separator()
+        if index is None:
+            menu.add_command(label='Add unique here...', command=lambda: self.add_here(save, x, y, 'Unique'))
+            menu.add_command(label='Add custom item here...', command=lambda: self.add_here(save, x, y, 'Custom'))
+            if self.form.item:
+                menu.add_command(label='Paste a copy of %s here' % L.item_title(self.db, self.form.item),
+                                 command=lambda: self.put_here(save, x, y, dict(self.form.build() or self.form.item, uid=None)))
+        else:
+            menu.add_command(label='Edit', command=lambda: self.right_pages.select(0))
+            menu.add_command(label='Copy to inventory', command=lambda: self.form.copy_to('inventory'))
+            menu.add_command(label='Copy to stash tab', command=lambda: self.form.copy_to('stash'))
+            menu.add_separator()
+            menu.add_command(label='Delete', command=self.form.delete)
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def put_here(self, save, x, y, item):
+        try:
+            L.place_item(self.db, save, item, x, y)
+        except ValueError as e:
+            return self.say('Cannot place it: %s' % e)
+        self.changed(save, 'Placed %s at %d,%d.' % (L.item_title(self.db, item), x, y))
+
+    def add_here(self, save, x, y, page):
+        """Opens the Add items page aimed at a cell; its next Add puts the item there."""
+        self.add_page.cell_target = (save, x, y)
+        self.add_page.target_box.set('Clicked cell %d,%d' % (x, y))
+        self.right_pages.select(1)
+        self.add_page.tabs.select({'Unique': 0, 'Custom': 1}[page])
+        self.say('Next item from the Add page goes to cell %d,%d.' % (x, y))
 
     # ------------------------------------------------------------ changes
     def say(self, text):
