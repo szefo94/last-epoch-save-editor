@@ -1,0 +1,14 @@
+# personal save files and backups never go to the repository
+Saves/
+Saves.zip
+backups/
+# build output and caches
+build/
+dist/
+__pycache__/
+*.pyc
+attic/
+# game art cut from lastepochtools.com: regenerate with fetch_icons.py
+data/icons/
+# session-specific
+data/created_characters.json
