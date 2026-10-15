@@ -2,6 +2,7 @@
 """Builds a runnable single-file version of the editor and installs a desktop launcher.
 
   python3 build.py            -> dist/LE_Save_Editor.pyz  (needs only python3 + tkinter, as on SteamOS)
+                                 add --hero when running it for the Hero Editor layout
   python3 build.py --binary   -> dist/LE_Save_Editor      (PyInstaller one-file binary, no Python needed;
                                  needs PyInstaller: python3 -m venv v && v/bin/pip install pyinstaller)
   python3 build.py --install  -> also writes a "LE Save Editor" entry to the application menu and Desktop
@@ -19,7 +20,7 @@ import zipapp
 HERE = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(HERE, 'dist')
 NAME = 'LE_Save_Editor'
-SOURCES = ['lesave.py', 'le_editor2.py', 'theme.py', 'import_maxroll.py', 'fetch_icons.py']
+SOURCES = ['lesave.py', 'le_editor2.py', 'le_hero.py', 'theme.py', 'import_maxroll.py', 'fetch_icons.py']
 FOLDERS = ['data', 'plans']
 ICON = os.path.join(DIST, 'le_save_editor.svg')
 ICON_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
@@ -51,7 +52,14 @@ def stage():
         shutil.copytree(os.path.join(HERE, name), os.path.join(build, name),
                         ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
     with open(os.path.join(build, '__main__.py'), 'w') as f:
-        f.write('import sys\nimport le_editor2\nsys.exit(le_editor2.main())\n')
+        f.write('import sys\n'
+                'argv = sys.argv[1:]\n'
+                'if "--hero" in argv:\n'
+                '    argv.remove("--hero")\n'
+                '    import le_hero as app\n'
+                'else:\n'
+                '    import le_editor2 as app\n'
+                'sys.exit(app.main(argv))\n')
     return build
 
 
