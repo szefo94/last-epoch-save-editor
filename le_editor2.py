@@ -1406,10 +1406,10 @@ class App(tk.Tk):
             menu.add_command(label='Copy to stash tab', command=lambda: self.form.copy_to('stash'))
             menu.add_separator()
             menu.add_command(label='Delete', command=self.form.delete)
-        try:
-            menu.tk_popup(event.x_root, event.y_root)
-        finally:
-            menu.grab_release()
+        menu.bind('<FocusOut>', lambda e: menu.unpost())      # a click anywhere else closes the menu
+        menu.bind('<Escape>', lambda e: menu.unpost())
+        menu.tk_popup(event.x_root, event.y_root)
+        menu.focus_set()
 
     def put_here(self, save, x, y, item):
         try:
