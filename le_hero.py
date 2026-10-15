@@ -20,7 +20,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 
 import lesave as L
 import theme
-from le_editor2 import CELL, GridView, IconCache, ItemForm, SlotView, idol_grid_size
+from le_editor2 import CELL, AddPage, GridView, IconCache, ItemForm, SlotView, idol_grid_size
 
 WAYPOINTS = ["Z22", "Z32", "Z52", "Z72", "Z92", "Z102", "A06", "A10", "A30", "A45", "A60TR", "A60", "A70", "EoT", "A90",
              "B10", "B20", "B25", "B30", "B33", "B7S10", "B40", "B1S40", "A50", "B40TR", "B50", "B60", "B80", "C10", "C20",
@@ -36,6 +36,39 @@ FLAGS = ['hardcore', 'masochist', 'soloChallenge', 'soloCharacterChallenge', 'po
          'clickedUnlockMasteriesButton', 'minionAIToggle', 'closedPassivesTooltip', 'closedSkillsTooltip',
          'closedMonolithTooltip', 'closedIdolsTooltip', 'closedTemporalShiftTooltip', 'closedMinSkillLevelTutorial',
          'closedAddEquipmentTooltip', 'closedForgingPotentialTooltip', 'closedUpgradeAffixTooltip', 'closedShatterEquipmentTooltip']
+
+
+def scrollable(parent):
+    """A frame whose content scrolls vertically; returns (outer, inner). The wheel is handled by the app."""
+    outer = ttk.Frame(parent)
+    canvas = tk.Canvas(outer, highlightthickness=0, borderwidth=0, background=theme.BG)
+    bar = ttk.Scrollbar(outer, orient='vertical', command=canvas.yview)
+    canvas.configure(yscrollcommand=bar.set)
+    bar.pack(side='right', fill='y')
+    canvas.pack(side='left', fill='both', expand=True)
+    inner = ttk.Frame(canvas)
+    window = canvas.create_window((0, 0), window=inner, anchor='nw')
+    inner.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+    canvas.bind('<Configure>', lambda e: canvas.itemconfigure(window, width=e.width))
+    return outer, inner
+
+
+class SpawnDialog(tk.Toplevel):
+    """The main editor's Add items page in a window, aimed at one grid cell."""
+
+    def __init__(self, app, save, x, y, page):
+        super().__init__(app)
+        self.title('Add item at cell %d,%d' % (x, y))
+        self.transient(app)
+        self.geometry('560x640')
+        outer, inner = scrollable(self)
+        outer.pack(fill='both', expand=True)
+        self.page = AddPage(inner, app)
+        self.page.pack(fill='both', expand=True)
+        self.page.cell_target = (save, x, y)
+        self.page.target_box.set('Clicked cell %d,%d' % (x, y))
+        self.page.tabs.select({'Unique': 0, 'Custom': 1}.get(page, 0))
+        app.spawn = self
 
 
 def labeled(parent, row, text, widget):
@@ -387,22 +420,32 @@ class ItemsTab(Tab):
         f.grid(row=1, column=0, columnspan=3, sticky='w', pady=(8, 0))
         row = ttk.Frame(f)
         row.pack(fill='x')
-        ttk.Label(row, text='Stash tab', style='Head.TLabel').pack(side='left')
-        self.tab_box = ttk.Combobox(row, state='readonly', width=40)
-        self.tab_box.pack(side='left', padx=6)
+        ttk.Label(row, text='Stash', style='Head.TLabel').pack(side='left')
+        ttk.Label(row, text=' category').pack(side='left')
+        self.cat_box = ttk.Combobox(row, state='readonly', width=18)
+        self.cat_box.pack(side='left', padx=4)
+        self.cat_box.bind('<<ComboboxSelected>>', lambda e: self.fill_tabs())
+        ttk.Label(row, text='tab').pack(side='left')
+        self.tab_box = ttk.Combobox(row, state='readonly', width=30)
+        self.tab_box.pack(side='left', padx=4)
         self.tab_box.bind('<<ComboboxSelected>>', lambda e: self.draw())
         self.views['stash'] = GridView(f, self.db, app.icons, lambda i: self.pick(self.tab(), i))
         self.views['stash'].pack(anchor='w')
         ttk.Label(grids, style='Dim.TLabel', wraplength=560, justify='left', text=(
             'Drag an item between the inventory, the stash tab and the idol grid; drop on an empty spot. '
-            'Click an item to edit it on the right; right-click a grid cell in the main editor for the add menu.')
+            'Click an item to edit it on the right; right-click a cell to add, paste, edit or delete there.')
         ).grid(row=2, column=0, columnspan=3, sticky='w', pady=4)
+        for key in ('inv', 'stash', 'idols'):
+            self.views[key].on_menu = (lambda k: lambda e, x, y, i: self.grid_menu(e, k, x, y, i))(key)
         for key, v in self.views.items():
             v.bind('<ButtonPress-1>', lambda e, k=key: self.drag_start(e, k), add='+')
             v.bind('<ButtonRelease-1>', lambda e, k=key: self.drag_end(e, k), add='+')
         self.drag = None
-        self.form = ItemForm(self, app)
-        self.form.grid(row=0, column=1, sticky='nsew', padx=(12, 0))
+        outer, inner = scrollable(self)
+        outer.grid(row=0, column=1, sticky='nsew', padx=(12, 0))
+        self.form = ItemForm(inner, app)
+        self.form.pack(fill='both', expand=True)
+        app.form = self.form
         self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
 
@@ -410,11 +453,53 @@ class ItemsTab(Tab):
         name = self.tab_box.get().split('  [', 1)[-1].rstrip(']') if self.tab_box.get() else None
         return self.app.tabs_files.get(name)
 
+    def save_for(self, key):
+        return self.tab() if key == 'stash' else self.app.char
+
     def load(self):
-        self.tab_box['values'] = ['%s  [%s]' % (t.json.get('displayName', n), n) for n, t in self.app.tabs_files.items()]
-        if self.tab_box['values'] and not self.tab_box.get():
+        cats = L.stash_categories(self.app.stash) if self.app.stash else {0: 'General'}
+        self.cat_box['values'] = ['%d: %s' % (i, n) for i, n in sorted(cats.items())]
+        if self.cat_box['values'] and not self.cat_box.get():
+            self.cat_box.current(0)
+        self.fill_tabs(keep=self.tab_box.get())
+
+    def fill_tabs(self, keep=None):
+        cat = int(self.cat_box.get().split(':')[0]) if self.cat_box.get() else 0
+        values = ['%s  [%s]' % (t.json.get('displayName', n), n) for n, t in self.app.tabs_files.items() if t.json.get('categoryId', 0) == cat]
+        self.tab_box['values'] = values
+        if keep in values:
+            self.tab_box.set(keep)
+        elif values:
             self.tab_box.current(0)
+        else:
+            self.tab_box.set('')
         self.draw()
+
+    def grid_menu(self, event, key, x, y, index):
+        save = self.save_for(key)
+        if save is None:
+            return self.app.say('Choose a stash tab first.')
+        container = {'inv': L.INVENTORY_ID, 'idols': 29, 'stash': L.INVENTORY_ID}[key]
+        menu = tk.Menu(self, tearoff=0, background=theme.PANEL, foreground=theme.TEXT,
+                       activebackground=theme.SELECT, activeforeground=theme.GOLD_LIGHT)
+        menu.add_command(label='Cell %d,%d' % (x, y), state='disabled')
+        menu.add_separator()
+        if index is None:
+            if key != 'idols':
+                menu.add_command(label='Add unique here...', command=lambda: SpawnDialog(self.app, save, x, y, 'Unique'))
+                menu.add_command(label='Add custom item here...', command=lambda: SpawnDialog(self.app, save, x, y, 'Custom'))
+            if self.form.item:
+                menu.add_command(label='Paste a copy of %s here' % L.item_title(self.db, self.form.item),
+                                 command=lambda: self.app.put_here(save, x, y, dict(self.form.build() or self.form.item, uid=None), container))
+        else:
+            menu.add_command(label='Copy to inventory', command=lambda: self.form.copy_to('inventory'))
+            menu.add_command(label='Copy to stash tab', command=lambda: self.form.copy_to('stash'))
+            menu.add_separator()
+            menu.add_command(label='Delete', command=self.form.delete)
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
 
     def draw(self, selected=()):
         char = self.app.char
@@ -714,6 +799,9 @@ class HeroEditor(tk.Tk):
         self.char_files, self.tabs_files = [], {}
         self.dirty = set()
         self.glow_phase = None
+        self.form = None
+        for seq in ('<Button-4>', '<Button-5>', '<MouseWheel>'):
+            self.bind_all(seq, self.wheel_anywhere, add='+')
         top = ttk.Frame(self, padding=6)
         top.pack(fill='x')
         ttk.Button(top, text='Saves folder...', command=self.browse).pack(side='left')
@@ -759,7 +847,30 @@ class HeroEditor(tk.Tk):
         self.dirty.add(save)
         self.changed('Added %d item(s).' % (len(items) - len(left)) + (' No room for %d.' % len(left) if left else ''))
 
+    def put_here(self, save, x, y, item, container=L.INVENTORY_ID):
+        try:
+            L.place_item(self.db, save, item, x, y, container)
+        except ValueError as e:
+            return self.say('Cannot place it: %s' % e)
+        self.dirty.add(save)
+        self.changed('Placed %s at %d,%d.' % (L.item_title(self.db, item), x, y))
+
+    def write_tabs(self, groups):
+        self.say('Writing whole stash tabs is a main editor feature; add one tab\'s items instead.')
+
+    def wheel_anywhere(self, event):
+        widget = event.widget
+        while widget is not None and not isinstance(widget, tk.Canvas):
+            if isinstance(widget, (tk.Text, tk.Listbox, ttk.Treeview, ttk.Combobox)):
+                return
+            widget = getattr(widget, 'master', None)
+        if isinstance(widget, tk.Canvas) and widget.cget('yscrollcommand'):
+            widget.yview_scroll(-3 if (event.num == 4 or event.delta > 0) else 3, 'units')
+
     def changed(self, message, save=None):
+        """Marks a file dirty and refreshes; accepts (message, save) and the item form's (save, message)."""
+        if isinstance(message, L.SaveFile) or (message is None and isinstance(save, str)):
+            message, save = save, message
         if save is not None:
             self.dirty.add(save)
         elif self.char:
@@ -767,6 +878,9 @@ class HeroEditor(tk.Tk):
         self.say(message + '  (not saved)')
         self.tabs['Items'].draw()
         self.tabs['Character'].refresh_summary()
+
+    def current_tab_or_none(self):
+        return self.tabs['Items'].tab()
 
     def update_glow(self):
         if self.dirty and self.glow_phase is None:
