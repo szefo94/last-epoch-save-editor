@@ -27,20 +27,24 @@ graph TD
     end
 
     subgraph Editor
-        E[le_editor2.py<br/>Tkinter UI]
+        H[le_hero.py<br/>Hero Editor window]
+        E[le_editor2.py<br/>browser layout, item widgets]
         L[lesave.py<br/>save and item library]
         TH[theme.py]
         IM[import_maxroll.py]
         PL[plans/*.py<br/>scripted stash sets]
         FI[fetch_icons.py]
         B[build.py<br/>pyz, binary, launcher]
+        H --> E
+        H --> L
+        H --> TH
         E --> L
         E --> TH
         E --> IM
         E --> PL
         PL --> L
         IM --> L
-        B --> E
+        B --> H
     end
 
     subgraph Data

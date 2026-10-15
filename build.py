@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Builds a runnable single-file version of the editor and installs a desktop launcher.
+"""Builds a runnable single-file version of the editor and installs desktop launchers.
 
-  python3 build.py            -> dist/LE_Save_Editor.pyz  (needs only python3 + tkinter, as on SteamOS)
-                                 add --hero when running it for the Hero Editor layout
-  python3 build.py --binary   -> dist/LE_Save_Editor      (PyInstaller one-file binary, no Python needed;
+  python3 build.py            -> dist/LE_Hero_Editor.pyz  (needs only python3 + tkinter, as on SteamOS)
+                                 runs the Hero Editor; add --browser for the stash / character browser layout
+  python3 build.py --binary   -> dist/LE_Hero_Editor      (PyInstaller one-file binary, no Python needed;
                                  needs PyInstaller: python3 -m venv v && v/bin/pip install pyinstaller)
   python3 build.py --install  -> also writes a "LE Save Editor" entry to the application menu and Desktop
 
-The .pyz is a zip archive with a shebang: double-click it in Dolphin, run ./dist/LE_Save_Editor.pyz, or
-python3 dist/LE_Save_Editor.pyz [saves folder]. Backups land in a backups/ folder next to the file.
+The .pyz is a zip archive with a shebang: double-click it in Dolphin, run ./dist/LE_Hero_Editor.pyz, or
+python3 dist/LE_Hero_Editor.pyz [saves folder]. Backups land in a backups/ folder next to the file.
 """
 import os
 import shutil
@@ -19,7 +19,7 @@ import zipapp
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(HERE, 'dist')
-NAME = 'LE_Save_Editor'
+NAME = 'LE_Hero_Editor'
 SOURCES = ['lesave.py', 'le_editor2.py', 'le_hero.py', 'theme.py', 'import_maxroll.py', 'fetch_icons.py']
 FOLDERS = ['data', 'plans']
 ICON = os.path.join(DIST, 'le_save_editor.svg')
@@ -54,11 +54,11 @@ def stage():
     with open(os.path.join(build, '__main__.py'), 'w') as f:
         f.write('import sys\n'
                 'argv = sys.argv[1:]\n'
-                'if "--hero" in argv:\n'
-                '    argv.remove("--hero")\n'
-                '    import le_hero as app\n'
-                'else:\n'
+                'if "--browser" in argv:\n'
+                '    argv.remove("--browser")\n'
                 '    import le_editor2 as app\n'
+                'else:\n'
+                '    import le_hero as app\n'
                 'sys.exit(app.main(argv))\n')
     return build
 
@@ -111,13 +111,21 @@ def install(target):
     exec_line = '"%s"' % target if not target.endswith('.pyz') else '/usr/bin/env python3 "%s"' % target
     apps = os.path.expanduser('~/.local/share/applications')
     os.makedirs(apps, exist_ok=True)
-    entry = DESKTOP.format(exec=exec_line, icon=ICON)
-    for path in (os.path.join(apps, 'le-save-editor.desktop'), os.path.expanduser('~/Desktop/LE Save Editor.desktop')):
-        if os.path.isdir(os.path.dirname(path)):
-            with open(path, 'w') as f:
-                f.write(entry)
-            os.chmod(path, 0o755)
-            print('installed', path)
+    for old in ('le-save-editor.desktop', 'le-save-editor-classic.desktop', 'le-hero-editor.desktop'):
+        for path in (os.path.join(apps, old), os.path.expanduser('~/Desktop/LE Save Editor.desktop'),
+                     os.path.expanduser('~/Desktop/LE Save Editor (classic).desktop')):
+            if os.path.exists(path):
+                os.remove(path)
+    for suffix, flag, label, comment in (('', '', 'LE Hero Editor', 'Last Epoch offline save editor'),
+                                         ('-browser', ' --browser', 'LE Hero Editor (browser layout)', 'Last Epoch save editor, stash and character browser layout')):
+        entry = DESKTOP.format(exec=exec_line + flag, icon=ICON).replace('Name=LE Save Editor', 'Name=' + label).replace(
+            'Comment=Last Epoch offline save editor', 'Comment=' + comment)
+        for path in (os.path.join(apps, 'le-hero-editor%s.desktop' % suffix), os.path.expanduser('~/Desktop/%s.desktop' % label)):
+            if os.path.isdir(os.path.dirname(path)):
+                with open(path, 'w') as f:
+                    f.write(entry)
+                os.chmod(path, 0o755)
+                print('installed', path)
     subprocess.run(['update-desktop-database', apps], capture_output=True)
 
 

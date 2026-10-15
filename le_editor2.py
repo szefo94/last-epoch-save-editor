@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Last Epoch save editor. Run: ./le_editor2.py [saves folder]
+"""Last Epoch save editor, browser layout (the Hero Editor in le_hero.py is the main front end).
+Run: ./le_editor2.py [saves folder]
 
 Left half: a Stash page (categories > tabs > items, with the tab's grid) and a Character page (equipped
 slots, idols, inventory and other containers, with paper doll and grids). Right half, scrollable: the

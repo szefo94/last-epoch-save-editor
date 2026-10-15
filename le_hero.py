@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Last Epoch Hero Editor: an experimental front end laid out like the Diablo II Hero Editor.
+"""Last Epoch Hero Editor: the main front end, laid out like the Diablo II Hero Editor.
 One character per window; everything about it in topic tabs with directly editable fields:
 
   Character   name, class, mastery, level, experience, modes, gold, stats overview
@@ -968,6 +968,12 @@ class HeroEditor(tk.Tk):
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    if '--selftest' in argv:   # used by build.py: load everything without opening a window
+        db = L.Database()
+        print('affixes %d, bases %d, uniques %d, guides %d, icons %d, classes %d, backups -> %s' % (
+            len(db.affixes), len(db.bases), len(db.uniques), len(L.load_guides()), len(L.Icons().bases),
+            len(L.load_trees()), L.BACKUP_ROOT))
+        return 0
     folder = argv[0] if argv else (L.find_game_folder() or os.path.join(L.HERE, 'Saves', 'Saves'))
     HeroEditor(folder).mainloop()
     return 0

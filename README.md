@@ -1,10 +1,27 @@
-# Last Epoch Save Editor
+# Last Epoch Hero Editor
 
 A desktop editor for **Last Epoch offline (single player) save files**, written in Python with Tkinter,
 with no dependencies beyond the standard library. Built and tested on a Steam Deck; it runs on any
 Linux or Windows machine with Python 3 and Tk and ships as a single file for Linux.
 
-![Last Epoch Save Editor](docs/screenshot.png)
+The main window follows the Diablo II Hero Editor idea: one character, everything about it in topic
+tabs with fields you edit directly.
+
+![Hero Editor, Items tab](docs/hero-items.png)
+
+| Tab | What you edit |
+|---|---|
+| Character | name, class, mastery, level and experience, modes (Hardcore, Masochist, Solo Account / Character Found), stash gold, stats overview |
+| Skills | passive nodes with + / - buttons and an unspent counter, specialized skills, their nodes and experience |
+| Items | paper doll, idol grid, inventory and a stash tab (by category) side by side, drag and drop between them, right-click to spawn items at a cell, the item editor beside the grids |
+| Quests | waypoint checklist by act, quest records, one-time events, copy campaign progress from another character |
+| Monolith | timeline unlocks and completion, corruption, blessings per timeline |
+| Misc | faction rank, reputation and favor, tutorial and UI flags |
+
+A second window, the **browser layout**, keeps the stash-centred view (categories, tabs, items,
+Maxroll build import, Apply build, New character, build plans, stats page); start it with `--browser`.
+
+![Browser layout](docs/screenshot.png)
 
 ## Features
 
@@ -58,7 +75,9 @@ The [docs](docs/README.md) folder walks through the save system and the editor:
 
 ```mermaid
 graph LR
-    UI[le_editor2.py] --> LIB[lesave.py]
+    HERO[le_hero.py] --> UI[le_editor2.py]
+    HERO --> LIB[lesave.py]
+    UI --> LIB
     UI --> theme.py
     UI --> import_maxroll.py
     UI --> plans/
@@ -68,16 +87,18 @@ graph LR
     LIB --> DATA[(data/<br/>bases, affixes, uniques,<br/>trees, skills, guides, icons)]
     import_maxroll.py --> MAX([maxroll.gg])
     fetch_icons.py --> LET([lastepochtools.com]) --> DATA
-    build.py --> UI
+    build.py --> HERO
 ```
 
 ## Running
 
 ```
-python3 le_editor2.py                 # opens the game's Saves folder when it finds it
-python3 le_editor2.py <saves folder>  # any folder with save files
-python3 build.py --install            # dist/LE_Save_Editor.pyz plus a desktop launcher (Linux)
+python3 le_hero.py                    # the Hero Editor, on the game's Saves folder when it finds it
+python3 le_hero.py <saves folder>     # any folder with save files
+python3 le_editor2.py                 # the browser layout
+python3 build.py --install            # dist/LE_Hero_Editor.pyz plus desktop launchers (Linux)
 python3 build.py --binary             # PyInstaller one-file binary (PyInstaller in a venv)
+dist/LE_Hero_Editor.pyz --browser     # the packaged build with the browser layout
 ```
 
 The game's Saves folder is found automatically on Steam Deck / Proton (`compatdata/899770`) and on
