@@ -1146,6 +1146,11 @@ def load_trees():
     return {int(k): v for k, v in json.loads(read_text('data', 'trees.json')).items()}
 
 
+def load_trees2():
+    """Like load_trees, with node positions, icons, link requirements and descriptions (data/trees2.json)."""
+    return {int(k): v for k, v in json.loads(read_text('data', 'trees2.json')).items()}
+
+
 def load_skills():
     """Planner skill key -> {'name', 'treeId'}."""
     return json.loads(read_text('data', 'skills.json'))

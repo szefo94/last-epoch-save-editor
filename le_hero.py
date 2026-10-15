@@ -20,6 +20,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 
 import lesave as L
 import theme
+from treeview import TreeWindow
 from le_editor2 import CELL, AddPage, GridView, IconCache, ItemForm, SlotView, idol_grid_size
 
 WAYPOINTS = ["Z22", "Z32", "Z52", "Z72", "Z92", "Z102", "A06", "A10", "A30", "A45", "A60TR", "A60", "A70", "EoT", "A90",
@@ -209,6 +210,7 @@ class SkillsTab(Tab):
         self.node_box.pack(side='left')
         ttk.Button(row2, text='Add node', command=self.add_passive).pack(side='left', padx=4)
         ttk.Button(row2, text='Reset tree', command=self.reset_passives).pack(side='left')
+        ttk.Button(left, text='Open the passive tree (graphical)', command=lambda: TreeWindow(self.app)).pack(anchor='w', pady=(6, 0))
         right = ttk.LabelFrame(self, text='Specialized skills', padding=8)
         right.grid(row=0, column=1, sticky='nsew', padx=(12, 0))
         self.columnconfigure(0, weight=1)
@@ -227,6 +229,7 @@ class SkillsTab(Tab):
         ttk.Button(row, text='Specialize in slot', command=self.specialize).pack(side='left', padx=4)
         ttk.Button(row, text='Max XP', command=self.max_xp).pack(side='left')
         ttk.Button(row, text='Remove', command=self.unspecialize).pack(side='left', padx=4)
+        ttk.Button(row, text='Open skill tree (graphical)', command=self.open_skill_tree).pack(side='left')
         self.nodes = ttk.Treeview(right, columns=('id', 'points', 'max'), height=10)
         for col, text, width in (('#0', 'Skill node', 220), ('id', 'Id', 40), ('points', 'Points', 60), ('max', 'Max', 40)):
             self.nodes.heading(col, text=text)
@@ -380,6 +383,12 @@ class SkillsTab(Tab):
             self.j['savedSkillTrees'].remove(st)
             self.app.changed('Specialization removed.')
             self.load()
+
+    def open_skill_tree(self):
+        st = self.current_skill()
+        if not st:
+            return self.app.say('Select a specialized skill first.')
+        TreeWindow(self.app, st['treeID'])
 
     def add_skill_node(self):
         st = self.current_skill()

@@ -20,7 +20,7 @@ import zipapp
 HERE = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(HERE, 'dist')
 NAME = 'LE_Hero_Editor'
-SOURCES = ['lesave.py', 'le_editor2.py', 'le_hero.py', 'theme.py', 'import_maxroll.py', 'fetch_icons.py']
+SOURCES = ['lesave.py', 'le_editor2.py', 'le_hero.py', 'treeview.py', 'theme.py', 'import_maxroll.py', 'fetch_icons.py']
 FOLDERS = ['data', 'plans']
 ICON = os.path.join(DIST, 'le_save_editor.svg')
 ICON_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">

@@ -33,7 +33,7 @@ Planner slot names: head, body, hands, waist, feet, finger1, finger2, neck, reli
 `data/trees.json` is a compact copy of the LastEpochPlanner project's `TreeData/1_4/tree_<class>.json`:
 per class its masteries, base stats (health, mana, attributes per level), the passive nodes
 (`maxPoints`, mastery, requirement, links, per-point stats) and the skill tree nodes per tree id.
-`data/skills.json` maps planner skill keys to tree ids. Node ids are the numeric suffix of the planner's
+`data/skills.json` maps planner skill keys to tree ids. `data/trees2.json` adds each node's position, icon and the points a link requires (`in: [[node, points]]`), for the graphical trees. Node ids are the numeric suffix of the planner's
 node names, which match the save file.
 
 The data is from game version 1.4; skills added later (Radiant Lance, Summon Elemental) are mapped by

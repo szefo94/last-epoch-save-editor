@@ -12,7 +12,7 @@ tabs with fields you edit directly.
 | Tab | What you edit |
 |---|---|
 | Character | name, class, mastery, level and experience, modes (Hardcore, Masochist, Solo Account / Character Found), stash gold, stats overview |
-| Skills | passive nodes with + / - buttons and an unspent counter, specialized skills, their nodes and experience |
+| Skills | passive nodes with + / - buttons and an unspent counter, specialized skills, their nodes and experience; graphical passive and skill trees with the game's icons where a left click allocates and a right click removes a point, within the budget, the link requirements and the mastery rules |
 | Items | paper doll, idol grid, inventory and a stash tab (by category) side by side, drag and drop between them, right-click to spawn items at a cell, the item editor beside the grids |
 | Quests | waypoint checklist by act, quest records, one-time events, copy campaign progress from another character |
 | Monolith | timeline unlocks and completion, corruption, blessings per timeline |

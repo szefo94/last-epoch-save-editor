@@ -6,6 +6,7 @@
 |---|---|
 | `lesave.py` | The library: file access (`SaveFile`, `find_game_folder`, backups, deploy), game data (`Database`, `Icons`), item encode/decode and creation, level requirement, rarity, stash categories and tabs, guide sets, character stats, character creation and preset application. Also a small command line (`show`, `kit`, `guide`, `backup`, `deploy`). |
 | `le_hero.py` | The main window: `HeroEditor` with the Character, Skills, Items, Quests, Monolith and Misc tabs, drag and drop between grids, the spawn dialog; reuses the item widgets of `le_editor2`. |
+| `treeview.py` | Graphical passive and skill trees: nodes at the planner's positions with the game's icons, links, left click allocates and right click removes a point within the game's rules (node maximum, budget, link requirement, mastery requirement, no cut-off nodes). |
 | `le_editor2.py` | The browser layout: `App` (toolbar, Stash and Character pages, scrollable right notebook), `ItemForm` (overview and editor), `AddPage` (unique, custom item, guide sets, plans, leveling kit), `StatsPage`, `GridView`, `SlotView`, `IconCache`, the New character and Apply build dialogs. |
 | `theme.py` | Colours, fonts and ttk styles in the game's look; rounded buttons are image elements; the glow styles for the Save button. |
 | `import_maxroll.py` | Maxroll guide and planner download and conversion to the guide JSON. |
@@ -21,7 +22,8 @@ archive when the editor runs packaged; backups then go next to the archive.
 | File | From |
 |---|---|
 | `data/bases.json`, `data/affixes.json`, `data/uniques.json` | LastEpochPlanner project (game data extraction) |
-| `data/trees.json`, `data/skills.json` | LastEpochPlanner `TreeData/1_4`, compacted |
+| `data/trees.json`, `data/trees2.json`, `data/skills.json` | LastEpochPlanner `TreeData/1_4`, compacted (`trees2` keeps positions, icons, link requirements) |
+| `data/tree_icons/*.png` | LastEpochPlanner `TreeData/sprites`, the node icons and hex frames |
 | `data/guides/*.json` | `import_maxroll.py` |
 | `data/icons/*.png`, `data/icons.json` | `fetch_icons.py` (not in the repository) |
 
