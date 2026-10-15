@@ -189,9 +189,15 @@ class CharacterTab(Tab):
 class SkillsTab(Tab):
     def __init__(self, app):
         super().__init__(app)
+        head = ttk.Frame(self)
+        head.grid(row=0, column=0, columnspan=2, sticky='ew', pady=(0, 6))
+        ttk.Label(head, text='Graphical trees:', style='Head.TLabel').pack(side='left')
+        ttk.Button(head, text='Open passive tree', command=lambda: TreeWindow(self.app)).pack(side='left', padx=6)
+        ttk.Button(head, text='Open selected skill tree', command=self.open_skill_tree).pack(side='left')
+        ttk.Label(head, style='Dim.TLabel', text='  left click adds a point, right click removes one; the lists below do the same by numbers').pack(side='left')
         left = ttk.LabelFrame(self, text='Passive tree', padding=8)
-        left.grid(row=0, column=0, sticky='nsew')
-        self.passives = ttk.Treeview(left, columns=('id', 'points', 'max'), height=18)
+        left.grid(row=1, column=0, sticky='nsew')
+        self.passives = ttk.Treeview(left, columns=('id', 'points', 'max'), height=12)
         for col, text, width in (('#0', 'Node', 220), ('id', 'Id', 40), ('points', 'Points', 60), ('max', 'Max', 40)):
             self.passives.heading(col, text=text)
             self.passives.column(col, width=width, anchor='w' if col == '#0' else 'e')
@@ -210,12 +216,11 @@ class SkillsTab(Tab):
         self.node_box.pack(side='left')
         ttk.Button(row2, text='Add node', command=self.add_passive).pack(side='left', padx=4)
         ttk.Button(row2, text='Reset tree', command=self.reset_passives).pack(side='left')
-        ttk.Button(left, text='Open the passive tree (graphical)', command=lambda: TreeWindow(self.app)).pack(anchor='w', pady=(6, 0))
         right = ttk.LabelFrame(self, text='Specialized skills', padding=8)
-        right.grid(row=0, column=1, sticky='nsew', padx=(12, 0))
+        right.grid(row=1, column=1, sticky='nsew', padx=(12, 0))
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
-        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
         self.skills = ttk.Treeview(right, columns=('tree', 'points', 'xp'), height=6)
         for col, text, width in (('#0', 'Slot / skill', 200), ('tree', 'Tree', 70), ('points', 'Points', 60), ('xp', 'XP', 90)):
             self.skills.heading(col, text=text)
@@ -229,8 +234,7 @@ class SkillsTab(Tab):
         ttk.Button(row, text='Specialize in slot', command=self.specialize).pack(side='left', padx=4)
         ttk.Button(row, text='Max XP', command=self.max_xp).pack(side='left')
         ttk.Button(row, text='Remove', command=self.unspecialize).pack(side='left', padx=4)
-        ttk.Button(row, text='Open skill tree (graphical)', command=self.open_skill_tree).pack(side='left')
-        self.nodes = ttk.Treeview(right, columns=('id', 'points', 'max'), height=10)
+        self.nodes = ttk.Treeview(right, columns=('id', 'points', 'max'), height=7)
         for col, text, width in (('#0', 'Skill node', 220), ('id', 'Id', 40), ('points', 'Points', 60), ('max', 'Max', 40)):
             self.nodes.heading(col, text=text)
             self.nodes.column(col, width=width, anchor='w' if col == '#0' else 'e')
@@ -798,7 +802,7 @@ class HeroEditor(tk.Tk):
     def __init__(self, folder):
         super().__init__()
         self.title('Last Epoch Hero Editor')
-        self.geometry('1280x780')
+        self.geometry('%dx%d+0+0' % (min(1280, self.winfo_screenwidth()), min(760, self.winfo_screenheight() - 60)))
         self.glow_styles = theme.apply(self)
         self.db = L.Database()
         self.icons = IconCache()
