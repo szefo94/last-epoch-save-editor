@@ -178,7 +178,8 @@ class ItemForm(ttk.Frame):
         self.all_affixes = [self.db.affix_label(a) for a, t in sorted(self.db.affixes) if t == 0]
         top = ttk.Frame(self)
         top.pack(fill='x')
-        self.picture = tk.Label(top, background=theme.BG, width=90, height=170)
+        self.blank = tk.PhotoImage(width=90, height=170)      # with an image set, width/height are pixels
+        self.picture = tk.Label(top, background=theme.BG, image=self.blank, width=90, height=170)
         self.picture.pack(side='left', padx=(0, 8))
         titles = ttk.Frame(top)
         titles.pack(side='left', fill='both', expand=True)
@@ -312,7 +313,7 @@ class ItemForm(ttk.Frame):
 
     def set_picture(self, item):
         img = self.app.icons.get(item, 'full') if item else None
-        self.picture.configure(image=img or '', width=90 if img is None else img.width(),
+        self.picture.configure(image=img or self.blank, width=90 if img is None else img.width(),
                                height=170 if img is None else img.height())
         self.picture.image = img
 
